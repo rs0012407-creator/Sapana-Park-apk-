@@ -1,0 +1,9 @@
+{
+  "appId": "com.sapanapark.residentportal",
+  "appName": "Sapana Park Resident Portal",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
