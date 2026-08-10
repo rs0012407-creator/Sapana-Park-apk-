@@ -1,0 +1,6 @@
+{
+  "name": "Sapana Park Society App",
+  "description": "Housing society management portal for Sapana Park CHS Goa featuring bills & maintenance payments, complaints & ticket timeline, society notices, community events, resident & vehicle directory, NOC requests, and Goa Society Act Bye-Laws.",
+  "requestFramePermissions": ["camera", "geolocation", "notifications", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
