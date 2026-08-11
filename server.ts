@@ -46,6 +46,9 @@ app.post('/api/auth/register', (req, res) => {
   try {
     const result = authManager.registerUser(req.body);
     if (!result.success) {
+      if (result.message && (result.message.includes('already registered') || result.message.includes('already exists'))) {
+        return res.status(409).json(result);
+      }
       return res.status(400).json(result);
     }
     return res.status(201).json(result);

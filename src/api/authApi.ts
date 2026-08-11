@@ -259,26 +259,126 @@ export async function registerUserApi(data: {
   }
 
   const baseUrl = getApiBaseUrl();
+  const endpoint = `${baseUrl}/api/auth/register`;
+
   try {
-    const response = await fetch(`${baseUrl}/api/auth/register`, {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(data),
+      signal: controller.signal,
     });
-    const result = await response.json().catch(() => null);
-    if (response.ok && result) {
-      return result;
+
+    clearTimeout(timeoutId);
+
+    const responseText = await response.text();
+    let result: any = null;
+    try {
+      result = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      result = null;
     }
-    return { success: false, message: result?.message || `Registration failed (HTTP ${response.status}).` };
+
+    if (import.meta.env.DEV) {
+      console.log('[Register API Endpoint]:', endpoint);
+      console.log('[Register API Response Status]:', response.status);
+      console.log(
+        '[Register API JSON Result]:',
+        result
+          ? {
+              success: result.success,
+              message: result.message,
+              userId: result.user?.id,
+            }
+          : responseText?.slice(0, 100)
+      );
+    }
+
+    // Handle HTTP 200 / 201 Success
+    if (response.status === 200 || response.status === 201) {
+      if (result && typeof result === 'object') {
+        if (result.success !== false) {
+          if (result.user) {
+            const resident = mapUserAccountToResident(result.user);
+            saveSession({
+              resident,
+              userAccount: result.user,
+              role: result.user.role || 'Resident',
+              isLoggedIn: true,
+            });
+          }
+          return {
+            success: true,
+            message: result.message || 'Registration successful! Account submitted for verification.',
+            user: result.user,
+          };
+        } else {
+          return {
+            success: false,
+            message: result.message || 'Registration failed. Please check your information.',
+          };
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Registration completed successfully.',
+      };
+    }
+
+    // Handle HTTP Error status codes (400, 409, 500, etc.)
+    if (result && typeof result === 'object' && result.message) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+
+    if (response.status === 409) {
+      return {
+        success: false,
+        message: 'This Email Address or Mobile Number is already registered in Sapana Park CHS.',
+      };
+    }
+
+    if (response.status === 400) {
+      return {
+        success: false,
+        message: 'Invalid registration information provided. Please verify all fields.',
+      };
+    }
+
+    if (response.status === 500) {
+      return {
+        success: false,
+        message: 'Database or server error during registration. Please try again later.',
+      };
+    }
+
+    return {
+      success: false,
+      message: `Registration failed with server status code ${response.status}.`,
+    };
   } catch (err: any) {
+    if (err.name === 'AbortError') {
+      return {
+        success: false,
+        message: 'Registration request timed out. Please check your network connection and retry.',
+      };
+    }
+
     const health = await checkApiHealth();
     if (!health.isOnline) {
       return { success: false, message: 'No Internet Connection. Please check network settings.' };
     }
     if (!health.isServerReachable) {
-      return { success: false, message: 'Backend server is unavailable. Please check server status.' };
+      return { success: false, message: 'Sapana Park Backend Server is unavailable. Please check server status.' };
     }
-    return { success: false, message: 'Network error during registration. Please check connection.' };
+
+    return { success: false, message: 'Network error during registration. Unable to connect to server.' };
   }
 }
 

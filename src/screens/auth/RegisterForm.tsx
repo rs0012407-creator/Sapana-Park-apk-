@@ -105,18 +105,37 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     });
     setLoading(false);
 
-    if (res.success && res.user) {
-      const residentObj = mapUserAccountToResident(res.user);
+    if (res.success) {
+      const userObj: UserAccount = res.user || {
+        id: `USER-${Date.now()}`,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        mobileNumber: mobileNumber.trim(),
+        colonyName: colonyName.trim() || 'Sapana Park CHS',
+        flatNumber: flatNumber.toUpperCase().trim(),
+        blockNumber: blockNumber.trim() || 'Wing A',
+        floorNumber: floorNumber.trim() || '1',
+        residentType: residentType,
+        profilePhoto: profilePhoto,
+        authProvider: 'Email',
+        verificationStatus: 'Pending Verification',
+        accountStatus: 'Active',
+        role: 'Resident',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const residentObj = mapUserAccountToResident(userObj);
       const sessionObj: UserSession = {
         resident: residentObj,
-        userAccount: res.user,
+        userAccount: userObj,
         role: 'Resident',
         isLoggedIn: true,
       };
       saveSession(sessionObj);
       onSuccess(sessionObj);
     } else {
-      setErrorMsg(res.message || 'Registration failed.');
+      setErrorMsg(res.message || 'Registration failed. Please try again.');
     }
   };
 
