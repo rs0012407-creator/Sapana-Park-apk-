@@ -28,6 +28,7 @@ import {
   Laptop,
 } from 'lucide-react';
 import { UserSession } from '../../api/authApi';
+import { DevicePermissionsScreen } from '../../components/DevicePermissionsScreen';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onLanguageChange,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'account' | 'security' | 'notifications' | 'appearance' | 'language' | 'help' | 'legal'
+    'account' | 'permissions' | 'security' | 'notifications' | 'appearance' | 'language' | 'help' | 'legal'
   >('account');
 
   // Sign out confirmation dialog state
@@ -177,6 +178,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <nav className="space-y-1">
               {[
                 { id: 'account', label: activeLanguage === 'Hindi' ? 'खाता सेटिंग्स' : 'Account Settings', icon: User },
+                { id: 'permissions', label: activeLanguage === 'Hindi' ? 'डिवाइस अनुमतियां' : 'Device Permissions', icon: Smartphone },
                 { id: 'security', label: activeLanguage === 'Hindi' ? 'गोपनीयता और सुरक्षा' : 'Privacy & Security', icon: Shield },
                 { id: 'notifications', label: activeLanguage === 'Hindi' ? 'सूचना सेटिंग्स' : 'Notification Settings', icon: Bell },
                 { id: 'appearance', label: activeLanguage === 'Hindi' ? 'रंग और स्वरूप' : 'Appearance', icon: Sun },
@@ -225,6 +227,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <h3 className="text-lg font-bold text-white flex items-center space-x-2">
               <span>
                 {activeTab === 'account' && (activeLanguage === 'Hindi' ? 'खाता विवरण संपादित करें' : 'Account Settings')}
+                {activeTab === 'permissions' && (activeLanguage === 'Hindi' ? 'डिवाइस अनुमतियां एवं कनेक्टिविटी' : 'Device Permissions & Integration')}
                 {activeTab === 'security' && (activeLanguage === 'Hindi' ? 'सुरक्षा एवं पासवर्ड' : 'Privacy & Security')}
                 {activeTab === 'notifications' && (activeLanguage === 'Hindi' ? 'सूचनाएं' : 'Notification Preferences')}
                 {activeTab === 'appearance' && (activeLanguage === 'Hindi' ? 'एप थीम्स' : 'Appearance Settings')}
@@ -357,6 +360,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </form>
             </div>
           )}
+
+          {/* 2. DEVICE PERMISSIONS & CONNECTIVITY TAB */}
+          {activeTab === 'permissions' && <DevicePermissionsScreen />}
 
           {/* 2. PRIVACY & SECURITY TAB */}
           {activeTab === 'security' && (
