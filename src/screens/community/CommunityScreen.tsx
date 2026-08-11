@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Users, Calendar, MapPin, Heart, Star, Phone, CheckCircle, Sparkles, Award, Plus, Ticket, Trash2, User } from 'lucide-react';
+import { Users, Calendar, MapPin, Heart, Star, Phone, CheckCircle, Sparkles, Award, Plus, Ticket, Trash2, User, Video, Radio, Clock, UserCheck } from 'lucide-react';
 import { CommunityEvent, EventRegistration, WomenEmpowermentInitiative } from '../../models/community';
 import { updateRSVP, INITIAL_EMPOWERMENT, registerUserForEvent, saveEvents } from '../../api/communityApi';
 import { UserSession } from '../../api/authApi';
+import { SocietyMeeting } from '../../models/meeting';
+import { INITIAL_MEETINGS } from '../../api/meetingApi';
 
 interface CommunityScreenProps {
   session: UserSession;
@@ -19,7 +21,9 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
   onOpenEventPass,
   onOpenAddEvent,
 }) => {
-  const [activeTab, setActiveTab] = useState<'events' | 'empowerment'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'meetings' | 'empowerment'>('events');
+  const [meetings] = useState<SocietyMeeting[]>(INITIAL_MEETINGS);
+  const [selectedMeetingModal, setSelectedMeetingModal] = useState<SocietyMeeting | null>(null);
 
   const handleRSVPClick = (eventId: string, rsvp: 'Going' | 'Maybe' | 'Not Going') => {
     updateRSVP(eventId, rsvp);
@@ -78,6 +82,14 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
               }`}
             >
               Society Events
+            </button>
+            <button
+              onClick={() => setActiveTab('meetings')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                activeTab === 'meetings' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Society Meetings
             </button>
             <button
               onClick={() => setActiveTab('empowerment')}
@@ -201,6 +213,143 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Society Meetings Tab */}
+      {activeTab === 'meetings' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {meetings.map((m) => (
+              <div
+                key={m.id}
+                className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col justify-between space-y-4"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] uppercase font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800 px-2.5 py-0.5 rounded-full">
+                      {m.meetingType}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        m.status === 'Live'
+                          ? 'bg-rose-600 text-white animate-pulse'
+                          : m.status === 'Upcoming'
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-white">{m.title}</h3>
+
+                  <div className="space-y-1.5 text-xs text-slate-300 mt-3">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{m.date} • {m.time}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Venue: {m.venue}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <UserCheck className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Organizer: {m.organizer} ({m.organizerRole})</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <span className="text-[11px] font-bold text-slate-400 block mb-1">Key Agenda Topics:</span>
+                    <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
+                      {m.agendaItems.slice(0, 2).map((item, idx) => (
+                        <li key={idx} className="truncate">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setSelectedMeetingModal(m)}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition"
+                  >
+                    Full Agenda & Details
+                  </button>
+
+                  {m.onlineJoinUrl && (
+                    <a
+                      href={m.onlineJoinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Join Online</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Details Modal */}
+      {selectedMeetingModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-white">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800 px-3 py-1 rounded-full">
+                {selectedMeetingModal.meetingType}
+              </span>
+              <button
+                onClick={() => setSelectedMeetingModal(null)}
+                className="text-slate-400 hover:text-white text-sm font-bold p-1"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <h3 className="text-lg font-black text-white">{selectedMeetingModal.title}</h3>
+
+            <div className="space-y-2 text-xs text-slate-300 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4 text-emerald-400" />
+                <span>Date & Time: {selectedMeetingModal.date} at {selectedMeetingModal.time}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-4 h-4 text-amber-400" />
+                <span>Venue: {selectedMeetingModal.venue}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <UserCheck className="w-4 h-4 text-sky-400" />
+                <span>Organizer: {selectedMeetingModal.organizer} ({selectedMeetingModal.organizerRole})</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 uppercase mb-2">Meeting Agenda Items:</h4>
+              <ul className="space-y-1.5 text-xs text-slate-300 bg-slate-950 p-4 rounded-2xl border border-slate-800 list-disc list-inside">
+                {selectedMeetingModal.agendaItems.map((agenda, i) => (
+                  <li key={i}>{agenda}</li>
+                ))}
+              </ul>
+            </div>
+
+            {selectedMeetingModal.onlineJoinUrl && (
+              <a
+                href={selectedMeetingModal.onlineJoinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs py-3 rounded-2xl transition flex items-center justify-center space-x-2 shadow-lg"
+              >
+                <Video className="w-4 h-4" />
+                <span>Join Virtual Zoom / Google Meet Room</span>
+              </a>
+            )}
+          </div>
         </div>
       )}
 

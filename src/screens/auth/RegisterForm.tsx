@@ -113,6 +113,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Registration Header */}
+      <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80 text-center">
+        <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wide">
+          Colony Resident Registration Form
+        </h3>
+        <p className="text-[11px] text-slate-300">
+          Fill in your details below to activate your Sapana Park account.
+        </p>
+      </div>
+
       {/* Continue with Google button */}
       <button
         type="button"
@@ -140,7 +150,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <span>Register using Google Account</span>
       </button>
 
-      <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center justify-center my-1">
         <div className="border-t border-slate-800 w-full" />
         <span className="bg-slate-900 px-3 text-[10px] text-slate-500 uppercase font-mono font-semibold">
           OR REGISTER WITH EMAIL / MOBILE

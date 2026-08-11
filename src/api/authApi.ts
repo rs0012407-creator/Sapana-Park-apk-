@@ -131,8 +131,8 @@ export function getStoredSession(): UserSession {
   }
   return {
     resident: INITIAL_RESIDENTS[0],
-    role: 'Secretary',
-    isLoggedIn: true,
+    role: 'Resident',
+    isLoggedIn: false,
   };
 }
 

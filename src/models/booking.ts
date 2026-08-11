@@ -80,6 +80,13 @@ export interface FacilityBooking {
   paymentMethod?: string;
   rulesAccepted: boolean;
   
+  // Identity Verification Document
+  idDocumentType?: string; // e.g. "Aadhaar Card", "Voter ID", "Driving License", "Passport"
+  idDocumentNumber?: string;
+  idDocumentName?: string;
+  idDocumentUrl?: string; // Data URL or Image URL
+  idVerificationStatus?: 'Pending' | 'Verified' | 'Rejected';
+
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;

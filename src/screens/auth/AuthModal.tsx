@@ -4,6 +4,7 @@ import { loginUserApi, googleAuthApi, saveSession, INITIAL_RESIDENTS, UserSessio
 import { RegisterForm } from './RegisterForm';
 import { ForgotPasswordView } from './ForgotPasswordView';
 import { GoogleCompletionView } from './GoogleCompletionView';
+import { GoogleAccountPickerModal } from '../../components/GoogleAccountPickerModal';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot' | 'googleCompletion'>('login');
+  const [isGooglePickerOpen, setIsGooglePickerOpen] = useState(false);
   
   // Login form states
   const [loginIdentifier, setLoginIdentifier] = useState('rajesh.naik@sapanapark.org');
@@ -70,24 +72,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     }
   };
 
-  const handleGoogleAuth = async () => {
+  const handleOpenGoogleAccountPicker = () => {
+    setErrorMsg('');
+    setIsGooglePickerOpen(true);
+  };
+
+  const handleSelectGoogleAccount = async (account: {
+    googleId: string;
+    email: string;
+    fullName: string;
+    profilePhoto: string;
+  }) => {
+    setIsGooglePickerOpen(false);
     setErrorMsg('');
     setLoading(true);
 
-    // Simulate Google Identity OAuth payload
-    const mockGooglePayload = {
-      googleId: `G-AUTH-${Date.now()}`,
-      email: 'rajesh.google.test@gmail.com',
-      fullName: 'Rajesh Google Resident',
-      profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    };
-
-    const res = await googleAuthApi(mockGooglePayload);
+    const res = await googleAuthApi(account);
     setLoading(false);
 
     if (res.success) {
       if (res.requiresColonyCompletion) {
-        setPendingGoogleProfile(mockGooglePayload);
+        setPendingGoogleProfile(account);
         setActiveTab('googleCompletion');
       } else if (res.user) {
         const residentObj = mapUserAccountToResident(res.user);
@@ -176,7 +181,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
             {/* Google Login Button */}
             <button
               type="button"
-              onClick={handleGoogleAuth}
+              onClick={handleOpenGoogleAccountPicker}
               disabled={loading}
               className="w-full bg-slate-800 hover:bg-slate-750 text-white border border-slate-700 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition shadow-md"
             >
@@ -339,7 +344,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
               onLoginSuccess(session);
               onClose();
             }}
-            onGoogleClick={handleGoogleAuth}
+            onGoogleClick={handleOpenGoogleAccountPicker}
           />
         )}
 
@@ -373,6 +378,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
           Cancel
         </button>
       </div>
+
+      {/* Device Google Accounts Picker Dialog */}
+      <GoogleAccountPickerModal
+        isOpen={isGooglePickerOpen}
+        onClose={() => setIsGooglePickerOpen(false)}
+        onSelectAccount={handleSelectGoogleAccount}
+      />
     </div>
   );
 };

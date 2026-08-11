@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wrench, Users, FileText, Contact, ShieldCheck, Building2 } from 'lucide-react';
+import { LayoutDashboard, Wrench, Users, FileText, Contact, ShieldCheck, Building2, IndianRupee } from 'lucide-react';
 
 export type ScreenTab = 'dashboard' | 'finance' | 'booking' | 'complaints' | 'community' | 'documents' | 'directory' | 'admin-users';
 
@@ -14,14 +14,16 @@ interface NavigationTabsProps {
 export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   activeTab,
   onSelectTab,
+  unpaidCount = 0,
   openComplaintsCount,
   isCommitteeMember = true,
 }) => {
   const tabs: { id: ScreenTab; label: string; icon: React.FC<{ className?: string }>; badge?: number; adminOnly?: boolean }[] = [
-    { id: 'dashboard', label: 'Dashboard & Meetings', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'finance', label: 'Bills & Dues', icon: IndianRupee, badge: unpaidCount },
     { id: 'booking', label: 'Room & Facility Booking', icon: Building2 },
     { id: 'complaints', label: 'Complaints', icon: Wrench, badge: openComplaintsCount },
-    { id: 'community', label: 'Community', icon: Users },
+    { id: 'community', label: 'Events & Meetings', icon: Users },
     { id: 'documents', label: 'Bye-Laws & NOCs', icon: FileText },
     { id: 'directory', label: 'Directory', icon: Contact },
     { id: 'admin-users', label: 'User Admin', icon: ShieldCheck, adminOnly: true },

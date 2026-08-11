@@ -2,12 +2,24 @@ export type ResidentType = 'Owner' | 'Tenant';
 
 export interface VerificationDocument {
   id: string;
-  type: 'Aadhaar Card' | 'PAN Card' | 'Possession Certificate' | 'Rent Agreement' | 'Police Verification Form N-1' | 'Electricity Bill' | 'Other';
+  type:
+    | 'Aadhaar Card'
+    | 'PAN Card'
+    | 'Possession Certificate'
+    | 'Rent Agreement'
+    | 'Police Verification Form N-1'
+    | 'Electricity Bill'
+    | 'Voter ID'
+    | 'Driving License'
+    | 'Passport'
+    | 'Other';
   documentNumber: string; // e.g. "XXXX-XXXX-1234"
   status: 'Verified' | 'Pending Review' | 'Submitted';
   uploadedDate: string;
   fileName?: string;
   fileDataUrl?: string;
+  expiryDate?: string;
+  remarks?: string;
 }
 
 export interface FamilyMember {
@@ -15,7 +27,12 @@ export interface FamilyMember {
   name: string;
   relation: string; // e.g. "Spouse", "Son", "Daughter", "Father", "Mother", "Relative"
   age: number;
+  gender?: 'Male' | 'Female' | 'Other';
+  occupation?: string;
+  email?: string;
+  bloodGroup?: string;
   phone?: string;
+  idProofType?: string;
   idProofNumber?: string;
 }
 

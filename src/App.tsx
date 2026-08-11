@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { Building2 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { NavigationTabs, ScreenTab } from './components/NavigationTabs';
 import { BottomNavigation } from './components/BottomNavigation';
 import { SmartAIAssistantModal } from './components/SmartAIAssistantModal';
 import { OfflineNotice } from './components/OfflineNotice';
+import { SplashScreen } from './components/SplashScreen';
+import { ExitAppModal } from './components/ExitAppModal';
+import { ToastProvider, useToast } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { App as CapApp } from '@capacitor/app';
+import { AnimatePresence } from 'motion/react';
 
 // Modals
 import { ProfileModal } from './components/ProfileModal';
@@ -45,17 +52,21 @@ import {
   getUserProfileCache,
 } from './utils/offlineStorage';
 
-export default function App() {
+function MainApp() {
   const { isOnline } = useOnlineStatus();
+  const { showToast } = useToast();
+
+  const [showSplash, setShowSplash] = useState(true);
   const [session, setSession] = useState<UserSession>(() => {
     const cachedProfile = getUserProfileCache();
     return cachedProfile || getStoredSession();
   });
   const [activeTab, setActiveTab] = useState<ScreenTab>('dashboard');
+
+  // Modals state
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-
-  // Profile, Settings, Permissions, Emergency & Event Modals
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
@@ -72,6 +83,21 @@ export default function App() {
   const [complaints, setComplaints] = useState<Complaint[]>(getStoredComplaints());
   const [events, setEvents] = useState<CommunityEvent[]>(getStoredEvents());
   const [nocs, setNocs] = useState<NOCApplication[]>(getStoredNOCs());
+
+  // Hide splash screen after 1.2s launch delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show AuthModal automatically after splash screen if user is not logged in
+  useEffect(() => {
+    if (!showSplash && !session.isLoggedIn) {
+      setIsAuthModalOpen(true);
+    }
+  }, [showSplash, session.isLoggedIn]);
 
   // Mock Notices
   const notices = [
@@ -138,6 +164,123 @@ export default function App() {
     }
   }, [isOnline]);
 
+  // Android Back Button Navigation Listener
+  useEffect(() => {
+    const handleBackNavigation = () => {
+      if (isExitModalOpen) {
+        setIsExitModalOpen(false);
+        return;
+      }
+      if (isProfileModalOpen) {
+        setIsProfileModalOpen(false);
+        return;
+      }
+      if (isSettingsModalOpen) {
+        setIsSettingsModalOpen(false);
+        return;
+      }
+      if (isPermissionsModalOpen) {
+        setIsPermissionsModalOpen(false);
+        return;
+      }
+      if (isEmergencyModalOpen) {
+        setIsEmergencyModalOpen(false);
+        return;
+      }
+      if (isAddEventModalOpen) {
+        setIsAddEventModalOpen(false);
+        return;
+      }
+      if (isAIModalOpen) {
+        setIsAIModalOpen(false);
+        return;
+      }
+      if (isAuthModalOpen) {
+        setIsAuthModalOpen(false);
+        return;
+      }
+      if (eventPassData) {
+        setEventPassData(null);
+        return;
+      }
+
+      if (activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+        return;
+      }
+
+      // On main screen with no modals open, open exit confirmation
+      setIsExitModalOpen(true);
+    };
+
+    let listenerHandle: any = null;
+    let isCancelled = false;
+
+    try {
+      const result = CapApp.addListener('backButton', () => {
+        handleBackNavigation();
+      });
+
+      if (result && typeof (result as any).then === 'function') {
+        (result as any).then((handle: any) => {
+          if (isCancelled) {
+            if (handle && typeof handle.remove === 'function') {
+              try {
+                handle.remove();
+              } catch {
+                // Ignore
+              }
+            }
+          } else {
+            listenerHandle = handle;
+          }
+        }).catch(() => {});
+      } else if (result && typeof (result as any).remove === 'function') {
+        listenerHandle = result;
+      }
+    } catch {
+      // Ignore if not in Capacitor environment
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      handleBackNavigation();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      isCancelled = true;
+      if (listenerHandle && typeof listenerHandle.remove === 'function') {
+        try {
+          listenerHandle.remove();
+        } catch {
+          // Ignore
+        }
+      }
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [
+    activeTab,
+    isExitModalOpen,
+    isProfileModalOpen,
+    isSettingsModalOpen,
+    isPermissionsModalOpen,
+    isEmergencyModalOpen,
+    isAddEventModalOpen,
+    isAIModalOpen,
+    isAuthModalOpen,
+    eventPassData,
+  ]);
+
+  const handleTabSelect = (tab: ScreenTab) => {
+    try {
+      window.history.pushState(null, '');
+    } catch {
+      // Ignore
+    }
+    setActiveTab(tab);
+  };
+
   const refreshBills = () => setBills(getStoredBills());
   const refreshComplaints = () => setComplaints(getStoredComplaints());
   const refreshEvents = () => setEvents(getStoredEvents());
@@ -148,6 +291,7 @@ export default function App() {
     setSession(updated);
     saveSession(updated);
     saveUserProfileCache(updated);
+    showToast(`Switched view role to ${newRole}`, 'info');
   };
 
   const handleSignOut = () => {
@@ -161,6 +305,7 @@ export default function App() {
     setIsProfileModalOpen(false);
     setIsSettingsModalOpen(false);
     setIsAuthModalOpen(true);
+    showToast('Signed out successfully', 'info');
   };
 
   const handleLoginSuccess = (newSession: UserSession) => {
@@ -169,11 +314,13 @@ export default function App() {
     refreshBills();
     refreshComplaints();
     refreshNOCs();
+    showToast(`Welcome back, ${newSession.resident.name}!`, 'success');
   };
 
   const handleAddEventSubmit = (newEventData: Omit<CommunityEvent, 'id' | 'attendeesCount' | 'userRSVP'>) => {
     const updatedEvents = addNewEvent(newEventData);
     setEvents(updatedEvents);
+    showToast('Community event published successfully!', 'success');
   };
 
   // Badges
@@ -184,7 +331,10 @@ export default function App() {
   const openComplaintsCount = userComplaints.filter((c) => c.status === 'Open' || c.status === 'In Progress').length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 pb-16 sm:pb-0">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 pb-20 sm:pb-0">
+      {/* Launch Splash Screen */}
+      <AnimatePresence>{showSplash && <SplashScreen />}</AnimatePresence>
+
       {/* Offline Connectivity Status Notice Bar */}
       <OfflineNotice isOnline={isOnline} />
 
@@ -197,19 +347,44 @@ export default function App() {
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenPermissions={() => setIsPermissionsModalOpen(true)}
         onOpenEmergency={() => setIsEmergencyModalOpen(true)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
         activeScreen={activeTab}
       />
 
       {/* Screen Navigation Bar */}
       <NavigationTabs
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={handleTabSelect}
         unpaidCount={unpaidCount}
         openComplaintsCount={openComplaintsCount}
       />
 
       {/* Main Container View */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Registration & Login Callout Banner when not logged in */}
+        {!session.isLoggedIn && (
+          <div className="mb-6 bg-gradient-to-r from-emerald-900/40 via-slate-900 to-teal-900/40 border border-emerald-500/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <Building2 className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Welcome to Sapana Park CHS Portal!</h3>
+                <p className="text-xs text-slate-300">
+                  Register a new colony account or log in to manage flat maintenance bills, complaints, bookings, and NOCs.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md shadow-emerald-950/40 flex items-center justify-center space-x-1.5"
+              >
+                <span>Register / Log In Now</span>
+              </button>
+            </div>
+          </div>
+        )}
         {activeTab === 'dashboard' && (
           <DashboardScreen
             session={session}
@@ -217,7 +392,7 @@ export default function App() {
             complaints={complaints}
             notices={notices}
             events={events}
-            onNavigate={setActiveTab}
+            onNavigate={handleTabSelect}
             onOpenAIHelp={() => setIsAIModalOpen(true)}
             onOpenProfile={() => setIsProfileModalOpen(true)}
             onOpenEventPass={(evt, reg) => setEventPassData({ event: evt, registration: reg })}
@@ -278,7 +453,7 @@ export default function App() {
       {/* Mobile Bottom Navigation Bar */}
       <BottomNavigation
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={handleTabSelect}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         unpaidCount={unpaidCount}
         openComplaintsCount={openComplaintsCount}
@@ -317,6 +492,9 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Exit App Modal */}
+      <ExitAppModal isOpen={isExitModalOpen} onClose={() => setIsExitModalOpen(false)} />
+
       {/* Device Permissions & Settings Modal */}
       {isPermissionsModalOpen && (
         <PermissionsModal onClose={() => setIsPermissionsModalOpen(false)} />
@@ -336,6 +514,7 @@ export default function App() {
             setSession(updatedSession);
             saveSession(updatedSession);
             saveUserProfileCache(updatedSession);
+            showToast('Profile updated successfully!', 'success');
           }}
         />
       )}
@@ -349,10 +528,14 @@ export default function App() {
           setSession(updatedSession);
           saveSession(updatedSession);
           saveUserProfileCache(updatedSession);
+          showToast('App settings saved!', 'success');
         }}
         onSignOut={handleSignOut}
         activeLanguage={activeLanguage}
-        onLanguageChange={setActiveLanguage}
+        onLanguageChange={(lang) => {
+          setActiveLanguage(lang);
+          showToast(`Language set to ${lang}`, 'info');
+        }}
       />
 
       {/* Event Ticket Pass Modal */}
@@ -389,3 +572,12 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <MainApp />
+      </ToastProvider>
+    </ErrorBoundary>
+  );
+}

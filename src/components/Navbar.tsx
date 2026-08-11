@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, ShieldCheck, UserCheck, Search, Bell, Sparkles, Wifi, WifiOff, Siren, Sliders, User, Settings } from 'lucide-react';
+import { Building2, ShieldCheck, UserCheck, Search, Bell, Sparkles, Wifi, WifiOff, Siren, Sliders, User, Settings, LogIn } from 'lucide-react';
 import { UserSession } from '../api/authApi';
 import { useOnlineStatus } from '../utils/offlineStorage';
 
@@ -11,6 +11,7 @@ interface NavbarProps {
   onOpenSettings: () => void;
   onOpenPermissions: () => void;
   onOpenEmergency: () => void;
+  onOpenAuth?: () => void;
   activeScreen: string;
 }
 
@@ -22,12 +23,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenPermissions,
   onOpenEmergency,
+  onOpenAuth,
   activeScreen,
 }) => {
   const { isOnline } = useOnlineStatus();
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800 shadow-md">
+    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800 shadow-md pt-safe">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand & Crest */}
@@ -135,15 +137,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Settings className="w-4 h-4 text-emerald-400" />
             </button>
 
-            {/* Profile Avatar Button */}
-            <button
-              onClick={onOpenProfile}
-              className="bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/50 px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center space-x-1"
-              title="Open Profile & Verification Documents"
-            >
-              <User className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{session.resident.flatNumber}</span>
-            </button>
+            {/* Profile or Login/Register Button */}
+            {!session.isLoggedIn ? (
+              <button
+                onClick={onOpenAuth}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-emerald-950/40 animate-pulse"
+                title="Register or Log In to Colony Account"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Register / Login</span>
+              </button>
+            ) : (
+              <button
+                onClick={onOpenProfile}
+                className="bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/50 px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center space-x-1"
+                title="Open Profile & Verification Documents"
+              >
+                <User className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{session.resident.flatNumber}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

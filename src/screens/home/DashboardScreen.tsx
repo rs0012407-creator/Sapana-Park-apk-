@@ -184,10 +184,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       subtitle: `${meetings.filter((m) => m.status !== 'Completed').length} Active / Upcoming`,
       icon: Users,
       color: 'from-emerald-500/20 to-teal-500/10 text-emerald-300 border-emerald-500/40',
-      action: () => {
-        const el = document.getElementById('society-meetings-section');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      },
+      action: () => onNavigate('community'),
     },
     {
       id: 'booking',
@@ -252,10 +249,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     {
       label: 'Jump to Meetings',
       icon: Users,
-      customAction: () => {
-        const el = document.getElementById('society-meetings-section');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      },
+      customAction: () => onNavigate('community'),
     },
     { label: 'Jump to Notices', tab: 'documents' as ScreenTab, icon: Megaphone },
     { label: 'Jump to Complaints', tab: 'complaints' as ScreenTab, icon: Wrench },
@@ -294,8 +288,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     },
   ];
 
+  const [referralClaimed, setReferralClaimed] = useState(false);
+
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-5 pb-16">
       {toastMessage && (
         <div className="fixed top-4 right-4 z-50 bg-emerald-950 border border-emerald-500/60 text-emerald-200 px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center space-x-2 animate-in fade-in slide-in-from-top-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -303,72 +299,225 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </div>
       )}
 
-      {/* Top Banner Section */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 rounded-3xl p-5 sm:p-7 border border-slate-800 shadow-2xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none flex items-center pr-6">
-          <Building2 className="w-80 h-80 text-emerald-400" />
+      {/* Top Status Tags Bar */}
+      <div className="flex items-center justify-between pt-1 px-1">
+        <div className="flex items-center space-x-2">
+          <span className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 text-xs px-3 py-1 rounded-full font-bold flex items-center space-x-1.5 shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>Aadhaar & KYC Verified</span>
+          </span>
         </div>
 
-        <div className="relative z-10 flex flex-col space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-extrabold shadow-lg">
-                <Building2 className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800/60 inline-block">
-                  Goa Regd. No. 452
-                </span>
-                <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight leading-tight mt-0.5">
-                  Sapana Park Co-operative Housing Society
-                </h1>
-              </div>
-            </div>
+        <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs px-3 py-1 rounded-full font-extrabold flex items-center space-x-1 shadow-sm">
+          <Building2 className="w-3.5 h-3.5 text-amber-400" />
+          <span>Sapana Park CHS</span>
+        </span>
+      </div>
 
+      {/* Banner 1: Referral Bonus Wallet */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-indigo-500/40 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold shrink-0">
+            <Award className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white">Referral Bonus Wallet</h3>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Balance: <strong className="text-emerald-400">{referralClaimed ? '₹100.0' : '₹50.0'}</strong> • Code: <span className="font-mono text-amber-300 font-bold">SAPANA50</span>
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            if (!referralClaimed) {
+              setReferralClaimed(true);
+              showToast('Referral Bonus +₹50 credited to your Sapana Park wallet!');
+            } else {
+              showToast('Bonus already claimed into wallet!');
+            }
+          }}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow ${
+            referralClaimed
+              ? 'bg-slate-800 text-emerald-400 border border-slate-700'
+              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+          }`}
+        >
+          {referralClaimed ? '✓ Claimed' : 'Claim +₹50'}
+        </button>
+      </div>
+
+      {/* Banner 2: Sapana Park AI Mitr */}
+      <div
+        onClick={onOpenAIHelp}
+        className="bg-gradient-to-r from-slate-900 via-emerald-950/80 to-slate-900 border border-emerald-500/40 rounded-2xl p-4 shadow-xl flex items-center justify-between cursor-pointer hover:border-emerald-500/80 transition group"
+      >
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shrink-0 group-hover:scale-105 transition">
+            <Sparkles className="w-5 h-5 text-amber-300 animate-spin" />
+          </div>
+          <div>
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => onNavigate('documents')}
-                title="Society Notices & Circulars"
-                className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 rounded-2xl border border-slate-700/80 transition relative"
-              >
-                <Bell className="w-4 h-4" />
-                {notices.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
-                )}
-              </button>
-
-              <button
-                onClick={onOpenProfile}
-                title="Resident Profile"
-                className="p-2 bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 rounded-2xl border border-emerald-500/40 transition flex items-center space-x-1.5 px-3"
-              >
-                <User className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold hidden sm:inline">Profile</span>
-              </button>
+              <h3 className="text-sm font-black text-white group-hover:text-emerald-300 transition">Sapana Park AI Mitr</h3>
+              <span className="bg-amber-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider">
+                AI ACTIVE
+              </span>
             </div>
-          </div>
-
-          <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white">
-                Welcome to Sapana Park Society 👋
-              </h2>
-              <p className="text-slate-300 text-xs sm:text-sm mt-1">
-                Resident: <strong className="text-emerald-400">{session.resident.name}</strong> • Flat <strong className="text-white font-mono">{session.resident.flatNumber}</strong> (Wing {session.resident.wing}) • Member ID: <span className="font-mono text-emerald-300">{session.resident.memberId}</span>
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2 shrink-0">
-              <button
-                onClick={onOpenAIHelp}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-emerald-950/40"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" />
-                <span>AI Help Desk</span>
-              </button>
-            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              24x7 Assistant for Events, Bills, Rules & Issues
+            </p>
           </div>
         </div>
+
+        <div className="p-2 bg-slate-800 rounded-xl border border-slate-700 text-emerald-400 group-hover:text-white group-hover:bg-emerald-600 transition">
+          <ArrowRight className="w-4 h-4" />
+        </div>
+      </div>
+
+      {/* Banner 3: Maintenance Dues Alert */}
+      <div className="bg-gradient-to-r from-rose-950/60 via-slate-900 to-rose-950/60 border border-rose-500/40 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-600/30 border border-rose-500/40 flex items-center justify-center text-rose-400 font-bold shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white flex items-center space-x-1">
+              <span>⚠️ Maintenance Dues: August 2026</span>
+            </h3>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Amount: <strong className="text-rose-300 font-mono">₹600</strong> • Due: <span className="text-amber-300">August 15, 2026</span>
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate('finance')}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-emerald-950/40 shrink-0"
+        >
+          Pay Now
+        </button>
+      </div>
+
+      {/* Quick Actions Header & 4x2 Grid */}
+      <div>
+        <div className="flex items-center justify-between mb-2.5 px-1">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-300">
+            Quick Actions
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2.5">
+          {/* Action 1: Meetings */}
+          <button
+            onClick={() => onNavigate('community')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Users className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Meetings</span>
+          </button>
+
+          {/* Action 2: New Complaint */}
+          <button
+            onClick={() => onNavigate('complaints')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-orange-600/20 border border-orange-500/40 text-orange-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Wrench className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition truncate w-full">New Com...</span>
+          </button>
+
+          {/* Action 3: Notices */}
+          <button
+            onClick={() => onNavigate('documents')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-teal-600/20 border border-teal-500/40 text-teal-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Megaphone className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Notices</span>
+          </button>
+
+          {/* Action 4: Emergency */}
+          <button
+            onClick={() => (onOpenEmergencyModal ? onOpenEmergencyModal() : onNavigate('directory'))}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-rose-600/20 border border-rose-500/40 text-rose-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Phone className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Emergency</span>
+          </button>
+
+          {/* Action 5: Committee */}
+          <button
+            onClick={() => onNavigate('directory')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-purple-600/20 border border-purple-500/40 text-purple-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Users className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Committee</span>
+          </button>
+
+          {/* Action 6: Events */}
+          <button
+            onClick={() => onNavigate('community')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-sky-600/20 border border-sky-500/40 text-sky-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Events</span>
+          </button>
+
+          {/* Action 7: Bye-Laws */}
+          <button
+            onClick={() => onNavigate('documents')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-amber-600/20 border border-amber-500/40 text-amber-400 flex items-center justify-center group-hover:scale-110 transition">
+              <FileText className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Bye-Laws</span>
+          </button>
+
+          {/* Action 8: Complaints */}
+          <button
+            onClick={() => onNavigate('complaints')}
+            className="bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 text-center transition group shadow-md"
+          >
+            <div className="w-11 h-11 rounded-full bg-orange-600/20 border border-orange-500/40 text-orange-400 flex items-center justify-center group-hover:scale-110 transition">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Complaints</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Banner 4: Colony & Home Complaint Box */}
+      <div className="bg-gradient-to-r from-orange-950/80 via-slate-900 to-amber-950/80 border border-orange-500/50 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-orange-600/30 border border-orange-500/40 flex items-center justify-center text-orange-400 font-bold shrink-0">
+            <Megaphone className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white">Colony & Home Complaint Box</h3>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Publicly visible complaints & photo evidence
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate('complaints')}
+          title="Open Colony Complaint Box"
+          className="p-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl transition shadow-lg shrink-0"
+        >
+          <Wrench className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Society Meeting Alert Banner (Live Now or Next Upcoming AGM) */}
