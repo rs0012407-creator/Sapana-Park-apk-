@@ -12,7 +12,36 @@ const PORT = 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
-// AUTH API ENDPOINTS
+// CORS middleware to support Android WebView/Capacitor and multi-origin calls
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Health check endpoints
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    app: 'Sapana Park CHS Resident Portal API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+app.get('/api/auth/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'AuthAPI',
+    database: 'Active',
+    registeredUsersCount: authManager.getAllUsers().length,
+  });
+});
 app.post('/api/auth/register', (req, res) => {
   try {
     const result = authManager.registerUser(req.body);

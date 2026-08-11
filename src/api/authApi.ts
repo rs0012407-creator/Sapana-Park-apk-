@@ -146,6 +146,92 @@ export function clearSession(): void {
 }
 
 // REST API CLIENT CALLS
+
+/**
+ * Resolves the API Base URL.
+ * Priority order:
+ * 1. Environment variable VITE_API_BASE_URL or VITE_BACKEND_URL
+ * 2. Window location origin (handles HTTPS and standard web deployments)
+ * 3. Fallback to relative string ''
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl.trim().replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined' && window.location) {
+    const origin = window.location.origin;
+    // Check if running inside Capacitor Android app or standalone file
+    const isCapacitorNative = (window as any).Capacitor?.isNativePlatform?.() ||
+      origin.startsWith('capacitor:') ||
+      origin.startsWith('file:');
+
+    if (isCapacitorNative) {
+      if (origin && !origin.startsWith('file:') && !origin.startsWith('capacitor:')) {
+        return origin.replace(/\/$/, '');
+      }
+    } else if (origin && origin !== 'null') {
+      return origin.replace(/\/$/, '');
+    }
+  }
+
+  return '';
+}
+
+/**
+ * Health check helper to clearly distinguish:
+ * - Device offline (no internet)
+ * - Server unreachable
+ * - Server online
+ */
+export async function checkApiHealth(): Promise<{
+  isOnline: boolean;
+  isServerReachable: boolean;
+  message: string;
+}> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      isOnline: false,
+      isServerReachable: false,
+      message: 'No Internet Connection. Please check your mobile data or Wi-Fi connection.',
+    };
+  }
+
+  try {
+    const baseUrl = getApiBaseUrl();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    const response = await fetch(`${baseUrl}/api/health`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      return {
+        isOnline: true,
+        isServerReachable: true,
+        message: 'Sapana Park API server is online and reachable.',
+      };
+    } else {
+      return {
+        isOnline: true,
+        isServerReachable: false,
+        message: `Backend server returned status code ${response.status}.`,
+      };
+    }
+  } catch (err: any) {
+    return {
+      isOnline: true,
+      isServerReachable: false,
+      message: 'Sapana Park backend server is unreachable. Please verify server status.',
+    };
+  }
+}
+
 export async function registerUserApi(data: {
   fullName: string;
   email: string;
@@ -160,28 +246,132 @@ export async function registerUserApi(data: {
   authProvider?: 'Email' | 'Google';
   googleId?: string;
 }): Promise<AuthResponse> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: false, message: 'No Internet Connection. Please connect to Wi-Fi or Mobile Data.' };
+  }
+
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch('/api/auth/register', {
+    const response = await fetch(`${baseUrl}/api/auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(data),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || `Registration failed (HTTP ${response.status}).` };
   } catch (err: any) {
+    const health = await checkApiHealth();
+    if (!health.isOnline) {
+      return { success: false, message: 'No Internet Connection. Please check network settings.' };
+    }
+    if (!health.isServerReachable) {
+      return { success: false, message: 'Backend server is unavailable. Please check server status.' };
+    }
     return { success: false, message: 'Network error during registration. Please check connection.' };
   }
 }
 
 export async function loginUserApi(loginIdentifier: string, password?: string): Promise<AuthResponse> {
+  const cleanIdentifier = (loginIdentifier || '').trim();
+  const cleanPassword = password || '';
+
+  if (!cleanIdentifier) {
+    return {
+      success: false,
+      message: 'Please enter your Email Address or Mobile Number.',
+    };
+  }
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return {
+      success: false,
+      message: 'No Internet Connection. Please check your Wi-Fi or Mobile Data.',
+    };
+  }
+
+  const baseUrl = getApiBaseUrl();
+  const endpoint = `${baseUrl}/api/auth/login`;
+
   try {
-    const response = await fetch('/api/auth/login', {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginIdentifier, password }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        loginIdentifier: cleanIdentifier,
+        password: cleanPassword,
+      }),
+      signal: controller.signal,
     });
-    return await response.json();
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json().catch(() => null);
+
+    if (response.ok && data) {
+      return data;
+    }
+
+    if (data && data.message) {
+      return {
+        success: false,
+        message: data.message,
+      };
+    }
+
+    if (response.status === 401) {
+      return {
+        success: false,
+        message: 'Invalid email/mobile or password. Please verify credentials.',
+      };
+    }
+
+    if (response.status === 400) {
+      return {
+        success: false,
+        message: 'Email or Mobile Number is required for login.',
+      };
+    }
+
+    return {
+      success: false,
+      message: `Login failed (HTTP ${response.status}). Please try again later.`,
+    };
   } catch (err: any) {
-    return { success: false, message: 'Network error during login. Please check connection.' };
+    const health = await checkApiHealth();
+    if (!health.isOnline) {
+      return {
+        success: false,
+        message: 'No Internet Connection. Please check your Wi-Fi or Mobile Data.',
+      };
+    }
+
+    if (!health.isServerReachable) {
+      return {
+        success: false,
+        message: 'Sapana Park Backend Server is unavailable. Please check server status.',
+      };
+    }
+
+    if (err.name === 'AbortError') {
+      return {
+        success: false,
+        message: 'Login request timed out. Please check network speed and retry.',
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Network error during login. Unable to reach server.',
+    };
   }
 }
 
@@ -191,61 +381,109 @@ export async function googleAuthApi(googleProfile: {
   fullName: string;
   profilePhoto?: string;
 }): Promise<AuthResponse> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: false, message: 'No Internet Connection. Please check network settings.' };
+  }
+
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch('/api/auth/google', {
+    const response = await fetch(`${baseUrl}/api/auth/google`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(googleProfile),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Google authentication failed.' };
   } catch (err: any) {
+    const health = await checkApiHealth();
+    if (!health.isOnline) return { success: false, message: 'No Internet Connection.' };
+    if (!health.isServerReachable) return { success: false, message: 'Backend server is unavailable.' };
     return { success: false, message: 'Network error during Google login.' };
   }
 }
 
 export async function forgotPasswordApi(identifier: string): Promise<{ success: boolean; message: string; resetToken?: string }> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: false, message: 'No Internet Connection. Please check network.' };
+  }
+
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch('/api/auth/forgot-password', {
+    const response = await fetch(`${baseUrl}/api/auth/forgot-password`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ identifier }),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Password reset request failed.' };
   } catch (err: any) {
+    const health = await checkApiHealth();
+    if (!health.isOnline) return { success: false, message: 'No Internet Connection.' };
+    if (!health.isServerReachable) return { success: false, message: 'Backend server is unavailable.' };
     return { success: false, message: 'Network error requesting password reset.' };
   }
 }
 
 export async function resetPasswordApi(identifier: string, resetToken: string, newPassword: string): Promise<AuthResponse> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: false, message: 'No Internet Connection.' };
+  }
+
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch('/api/auth/reset-password', {
+    const response = await fetch(`${baseUrl}/api/auth/reset-password`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ identifier, resetToken, newPassword }),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Reset password failed.' };
   } catch (err: any) {
+    const health = await checkApiHealth();
+    if (!health.isOnline) return { success: false, message: 'No Internet Connection.' };
+    if (!health.isServerReachable) return { success: false, message: 'Backend server is unavailable.' };
     return { success: false, message: 'Network error resetting password.' };
   }
 }
 
 export async function updateUserProfileApi(userId: string, updates: Partial<UserAccount>): Promise<{ success: boolean; message: string; user?: UserAccount }> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch('/api/users/profile', {
+    const response = await fetch(`${baseUrl}/api/users/profile`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ userId, updates }),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Failed to update profile.' };
   } catch (err: any) {
     return { success: false, message: 'Network error updating profile.' };
   }
 }
 
 export async function fetchAdminUsersApi(): Promise<{ success: boolean; users?: UserAccount[]; message?: string }> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch('/api/admin/users');
-    return await response.json();
+    const response = await fetch(`${baseUrl}/api/admin/users`, {
+      headers: { Accept: 'application/json' },
+    });
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Failed to fetch users.' };
   } catch (err: any) {
     return { success: false, message: 'Failed to connect to backend user management API.' };
   }
@@ -257,41 +495,58 @@ export async function updateUserStatusApi(
   accountStatus?: UserAccount['accountStatus'],
   role?: UserAccount['role']
 ): Promise<{ success: boolean; message: string; user?: UserAccount }> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch(`/api/admin/users/${userId}/status`, {
+    const response = await fetch(`${baseUrl}/api/admin/users/${userId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ verificationStatus, accountStatus, role }),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Failed to update user status.' };
   } catch (err: any) {
     return { success: false, message: 'Failed to update user status.' };
   }
 }
 
 export async function resetUserAccessApi(userId: string, defaultPassword?: string): Promise<{ success: boolean; message: string; newPass?: string }> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch(`/api/admin/users/${userId}/reset-access`, {
+    const response = await fetch(`${baseUrl}/api/admin/users/${userId}/reset-access`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ defaultPassword }),
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Failed to reset user access.' };
   } catch (err: any) {
     return { success: false, message: 'Failed to reset user access.' };
   }
 }
 
 export async function deleteUserApi(userId: string): Promise<{ success: boolean; message: string }> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const response = await fetch(`/api/admin/users/${userId}`, {
+    const response = await fetch(`${baseUrl}/api/admin/users/${userId}`, {
       method: 'DELETE',
+      headers: { Accept: 'application/json' },
     });
-    return await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result) {
+      return result;
+    }
+    return { success: false, message: result?.message || 'Failed to delete user.' };
   } catch (err: any) {
     return { success: false, message: 'Failed to delete user.' };
   }
 }
+
 
 export function loginWithFlatAndOTP(flatNumber: string, otp: string): { success: boolean; message: string; session?: UserSession } {
   const found = INITIAL_RESIDENTS.find(
