@@ -55,18 +55,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     e.preventDefault();
     setErrorMsg('');
 
+    if (loading) return; // Prevent duplicate requests if already submitting
+
     if (!fullName.trim()) {
       setErrorMsg('Please enter your Full Name.');
       return;
     }
 
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Please enter a valid Email Address.');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email.trim())) {
+      setErrorMsg('Please enter a valid Email Address (e.g. name@example.com).');
       return;
     }
 
-    if (!mobileNumber.trim() || mobileNumber.replace(/\D/g, '').length < 10) {
-      setErrorMsg('Please enter a valid 10-digit Mobile Number.');
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      setErrorMsg('Please enter a valid 10-digit Indian Mobile Number starting with 6-9.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Password and Confirm Password do not match.');
       return;
     }
 

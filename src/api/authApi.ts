@@ -151,9 +151,11 @@ export function clearSession(): void {
  * Resolves the API Base URL.
  * Priority order:
  * 1. Environment variable VITE_API_BASE_URL or VITE_BACKEND_URL
- * 2. Window location origin (handles HTTPS and standard web deployments)
- * 3. Fallback to relative string ''
+ * 2. Window location origin (for web app served directly over HTTPS)
+ * 3. Default Production HTTPS Backend URL for native Capacitor Android apps
  */
+export const DEFAULT_PROD_API_URL = 'https://ais-dev-hm4fxnbs4x4wismfoa7re6-619033421864.asia-southeast1.run.app';
+
 export function getApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL;
   if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
@@ -162,21 +164,27 @@ export function getApiBaseUrl(): string {
 
   if (typeof window !== 'undefined' && window.location) {
     const origin = window.location.origin;
-    // Check if running inside Capacitor Android app or standalone file
-    const isCapacitorNative = (window as any).Capacitor?.isNativePlatform?.() ||
+    
+    // Check if running inside Capacitor Android app or standalone file context
+    const isCapacitorOrNativeLocal =
+      !origin ||
+      origin === 'null' ||
       origin.startsWith('capacitor:') ||
-      origin.startsWith('file:');
+      origin.startsWith('file:') ||
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1');
 
-    if (isCapacitorNative) {
-      if (origin && !origin.startsWith('file:') && !origin.startsWith('capacitor:')) {
-        return origin.replace(/\/$/, '');
-      }
-    } else if (origin && origin !== 'null') {
+    if (isCapacitorOrNativeLocal) {
+      // In native Android Capacitor APK, fall back to the live HTTPS backend URL
+      return DEFAULT_PROD_API_URL;
+    }
+
+    if (origin) {
       return origin.replace(/\/$/, '');
     }
   }
 
-  return '';
+  return DEFAULT_PROD_API_URL;
 }
 
 /**

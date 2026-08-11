@@ -176,15 +176,39 @@ class UserAuthManager {
     const emailClean = data.email.trim().toLowerCase();
     const mobileClean = data.mobileNumber.replace(/\D/g, '');
 
-    // Check duplicate email or mobile
-    const existing = this.users.find(
-      (u) => u.email.toLowerCase() === emailClean || u.mobileNumber.replace(/\D/g, '') === mobileClean
-    );
-
-    if (existing) {
+    // Validate Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailClean)) {
       return {
         success: false,
-        message: 'An account with this Email Address or Mobile Number already exists.',
+        message: 'Invalid Email Address format. Please enter a valid email address.',
+      };
+    }
+
+    // Validate Indian Mobile Number format (10 digits starting with 6, 7, 8, or 9)
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobileClean)) {
+      return {
+        success: false,
+        message: 'Invalid Mobile Number. Please enter a valid 10-digit Indian mobile number (starting with 6-9).',
+      };
+    }
+
+    // Check duplicate email specifically
+    const existingEmail = this.users.find((u) => u.email.toLowerCase() === emailClean);
+    if (existingEmail) {
+      return {
+        success: false,
+        message: 'This Email Address is already registered in Sapana Park CHS. Please log in or use another email.',
+      };
+    }
+
+    // Check duplicate mobile number specifically
+    const existingMobile = this.users.find((u) => u.mobileNumber.replace(/\D/g, '') === mobileClean);
+    if (existingMobile) {
+      return {
+        success: false,
+        message: 'This Mobile Number is already registered in Sapana Park CHS. Please log in or use another number.',
       };
     }
 
